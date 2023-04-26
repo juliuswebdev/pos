@@ -1019,6 +1019,7 @@ class ProductController extends Controller
         }
     }
 
+
     /**
      * Get product form parts.
      *
