@@ -61,7 +61,9 @@ return [
     'order_table' => 'Order Table',
     'select_location' => 'Select Location...',
     'select_categories' => 'Select Categories...',
-    'select_brands' => 'Select Brands...'
+    'select_brands' => 'Select Brands...',
+    'freeze_count' => 'Freeze Count',
+    'freeze_confirm' => 'Are you sure you want to freeze count?'
     // 'add' => 'Inventory Count',
     // 'search_product' => 'Search products for stock adjustment',
     // 'adjustment_type' => 'Adjustment type',

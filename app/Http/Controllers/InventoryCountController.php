@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 
 use App\CountHeader;
+use App\CountDetail;
+use App\CountFrozenInventoryBalance;
 use App\BusinessLocation;
 use App\Category;
 use App\Brands;
@@ -33,7 +35,7 @@ class InventoryCountController extends Controller
         if (! auth()->user()->can('purchase.create')) {
             abort(403, 'Unauthorized action.');
         }
-
+        $request = request();
         if (request()->ajax()) {
  
             $inventory_count = CountHeader::where('count_header.business_id', Auth::user()->business_id)
@@ -61,27 +63,55 @@ class InventoryCountController extends Controller
                     AS brands '),
                     'count_header.count_type AS type',
                     'count_header.status'
-                ])
-                ->get();
+                ]);
             return Datatables::of($inventory_count)
                 ->addColumn(
                     'action',
                     function($row) {
                         $html = '<div class="btn-group" class="inventory_count_dropdown">
                             <button type="button" class="btn btn-info dropdown-toggle btn-xs" data-toggle="dropdown" aria-expanded="false">Actions<span class="caret"></span><span class="sr-only">Toggle Dropdown</span></button>
-                            <ul class="dropdown-menu dropdown-menu-left" role="menu">
-                                <li>
+                            <ul class="action dropdown-menu dropdown-menu-left" role="menu">';
+
+                            if($row->status == 1) {
+                                $html .=  '<li>
+                                    <a href="#" data-toggle="modal" data-target="#freeze_confirm" class="action_modal_form" data-action="'.action('App\Http\Controllers\InventoryCountController@freeze_count', [$row->id]).'">
+                                        <i class="fa fa-file" aria-hidden="true" style="margin-right: 10px"></i>'.__("inventory_count.freeze_count").'
+                                    </a>
+                                </li>';
+                            } else {
+                                $html .=  '<li class="disabled">
+                                    <a href="#">
+                                        <i class="fa fa-file" aria-hidden="true" style="margin-right: 10px"></i>'.__("inventory_count.freeze_count").'
+                                    </a>
+                                </li>';  
+                            }
+
+                            if($row->status == 2) {
+                            $html .=  '<li>
                                     <a class="download_inventory_count" href="'.action('App\Http\Controllers\InventoryCountController@download_initial_file', [$row->id]).'" data-count_reference="'.$row->count_reference.'">
                                         <i class="fa fa-download" aria-hidden="true"></i>'.__("inventory_count.download_count").'
                                     </a>
                                 </li>
                                 <li>
-                                    <a href="#" data-toggle="modal" data-target="#finalize" class="upload_final_file" data-count_reference="'.$row->id.'">
-                                        <i class="fa fa-upload" aria-hidden="true" style="margin-right: 10px"></i> '.__("inventory_count.upload_count").'
+                                    <a href="#" data-toggle="modal" data-target="#upload_count" class="action_modal_form" data-action="'.action('App\Http\Controllers\InventoryCountController@upload_final_file', [$row->id]).'">
+                                        <i class="fa fa-upload" aria-hidden="true" style="margin-right: 10px"></i>'.__("inventory_count.upload_count").'
                                     </a>
                                 </li>';
-                                if($row->final_file) {
-                                    $html .= '
+                            } else {
+                                $html .=  '<li class="disabled">
+                                    <a href="#">
+                                        <i class="fa fa-download" aria-hidden="true"></i>'.__("inventory_count.download_count").'
+                                    </a>
+                                </li>
+                                <li class="disabled">
+                                    <a href="#">
+                                        <i class="fa fa-upload" aria-hidden="true" style="margin-right: 10px"></i>'.__("inventory_count.upload_count").'
+                                    </a>
+                                </li>';
+                            }
+
+                            if($row->final_file) {
+                            $html .=  '
                                     <li class="divider"></li>
                                     <li>
                                         <a href="/uploads/csv/'.$row->final_file.'">
@@ -92,12 +122,10 @@ class InventoryCountController extends Controller
                                         <a href="#" data-toggle="modal" data-target="#final_report">
                                             <i class="fa fa-file" aria-hidden="true"></i>'.__("inventory_count.final_report").'
                                         </a>
-                                    </li>'; 
-                                }
-
-                        $html .= '</ul>
-                        </div>
-                        ';
+                                    </li>';
+                            }
+                            $html .=  '</ul>
+                            </div>';
                     return $html;
                     })
 
@@ -128,11 +156,18 @@ class InventoryCountController extends Controller
                         } else if ($row->status == 2) {
                             $text = 'Frozen';
                         } else if ($row->status == 3) {
+                            $text = 'Count Updated';
+                        } else if ($row->status == 4) {
                             $text = 'Posted';
                         }
                         return $text;
                     }
                 )
+                ->filter(function ($instance) use ($request) {
+                    if ($request->get('status')) {
+                        $instance->where('status', $request->get('status'));
+                    }
+                })
                 ->rawColumns(['action', 'type'])
                 ->make(true);
         }
@@ -165,7 +200,7 @@ class InventoryCountController extends Controller
     */
     public function store(Request $request)
     {
-        $inventory_count = CountHeader::create([
+        $count_header = CountHeader::create([
             'count_reference' => 'sc-'.date("Ymd-his"),
             'business_id' => Auth::user()->business_id,
             'business_location_id' => $request['business_location_id'],
@@ -181,6 +216,27 @@ class InventoryCountController extends Controller
             'user_froze_count' => 0,
             'user_posted_count' => 0
         ]);
+
+        if($count_header->count_type == 'partial' || $count_header->count_type == 'entire_location' ) {
+
+            $products_query = $this->filter_products($count_header);
+
+            $products = $products_query->select([
+                DB::raw('CONCAT("'.$count_header->id.'") AS count_header_id'),
+                'products.sku AS sku',
+                DB::raw('CONCAT("") AS upc'),
+                DB::raw('CURRENT_TIMESTAMP() AS created_at')
+            ]);
+
+            CountDetail::insertUsing([
+                'count_header_id',
+                'sku',
+                'upc',
+                'created_at'
+            ],$products);
+
+
+        }
         return redirect()->back();
     }
 
@@ -189,19 +245,105 @@ class InventoryCountController extends Controller
      *
      * @return \Illuminate\Http\Response
     */
-    public function qty_adjustment($id) {
+    public function freeze_count($id)
+    {
+        $count_header = CountHeader::find($id);
+        $count_header->status = 2;
+        $count_header->user_froze_count = Auth::user()->id;
+        $count_header->save();
+
+        if($count_header->count_type == 'partial' || $count_header->count_type == 'entire_location') {
+            $products_query = $this->filter_products($count_header);
+
+            $products = $products_query->select([
+                DB::raw('CONCAT("'.$count_header->id.'") AS count_header_id'),
+                'products.sku AS sku',
+                DB::raw('CONCAT("") AS upc'),
+                DB::raw("( SELECT COALESCE(SUM(qty_available), 0) FROM variation_location_details WHERE product_id = products.id
+                    ) as frozen_quantity"),
+                DB::raw('CURRENT_TIMESTAMP() AS created_at'),
+                DB::raw('CURRENT_TIMESTAMP() AS updated_at')
+            ]);
+
+            CountFrozenInventoryBalance::insertUsing([
+                'count_header_id',
+                'sku',
+                'upc',
+                'frozen_quantity',
+                'created_at',
+                'updated_at'
+            ],$products);
+
+            foreach($products->get() as $item) {
+                CountDetail::where('count_header_id', $item->count_header_id)->where('sku', $item->sku)->update(['frozen_quantity' => $item->frozen_quantity]);
+            }
+        }
+        
+        return redirect()->back();
+    }
+
+
+    /**
+     * Show the form for creating a new resource.
+     *
+     * @return \Illuminate\Http\Response
+    */
+    public function qty_adjustment($id) 
+    {
         return view('inventory_count.qty_adjustment');
     }
 
-    public function download_initial_file($id) {
+    /**
+     * Show the form for creating a new resource.
+     *
+     * @return \Illuminate\Http\Response
+    */
+    public function download_initial_file($id) 
+    {
         
-        // $inventory_count = CountHeader::where('id', $id)->select('count_reference')->first();
-        // $file_name = $inventory_count->count_reference ?? 'sc-'.$id;
-        // return Excel::download(new StockCountExport($id), $file_name.'.csv');
-
         $count_header = CountHeader::find($id);
-        echo $count_header->count_type .'<br>';
+        $file_name = $count_header->count_reference ?? 'sc-'.$id;
+        return Excel::download(new StockCountExport($this->filter_products($count_header), $count_header->count_type), $file_name.'.csv');
+    }
 
+    /**
+     * Show the form for creating a new resource.
+     *
+     * @return \Illuminate\Http\Response
+    */
+    public function upload_final_file(Request $request, $id)
+    {
+
+        $request->validate([
+            "final_file" => 'required|mimetypes:text/csv,text/plain,application/csv,text/comma-separated-values,text/anytext,application/octet-stream,application/txt'
+        ]);
+
+        if ($request->hasFile('final_file')) {
+            $file = $request->file('final_file');
+            $name = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+            $fileName = 'sc-'.date("Ymd-his") . "." . $file->getClientOriginalExtension();
+            $file->storeAs('csv', $fileName, 'local');
+            $csv = $fileName;
+
+            $count_header = CountHeader::find($id);
+            $count_header->final_file = $csv;
+            $count_header->status = 3;
+            $count_header->save();
+
+        }
+
+        Excel::import(new CountDetailImport($id, $count_header->count_type),request()->file('final_file'));
+        return back();
+
+    }
+
+        /**
+     * Show the form for creating a new resource.
+     *
+     * @return \Illuminate\Http\Response
+    */
+    public function filter_products($count_header)
+    {
         $products_query = DB::table('products')->where('business_id', Auth::user()->business_id);
         $products_query->leftJoin('variation_location_details', function($join) {
             $join->on('variation_location_details.product_id', '=', 'products.id');
@@ -217,49 +359,8 @@ class InventoryCountController extends Controller
                     ->orWhereIn('products.brand_id', [$count_header->brands]);
         }
 
-        $products = $products_query
-            ->select([
-                'products.sku AS sku',
-                DB::raw('CONCAT("") AS upc_code'),
-                DB::raw('CONCAT("") AS imei_or_serial'),
-                'products.name AS product_name',
-                DB::raw("( SELECT COALESCE(SUM(qty_available), 0) FROM variation_location_details WHERE product_id = products.id
-                ) as expected"),
-                DB::raw('CONCAT("") AS counted'),
-                'products.category_id AS category',
-                'products.sub_category_id AS sub_category',
-                'products.brand_id AS brand'
-            ])
-            ->get();
-            
-
-        echo '<pre>';
-        print_r($products);
-        echo '</pre>';
-
+        return $products_query;
     }
 
-    public function upload_final_file(Request $request, $id) {
-
-        $request->validate([
-            "final_file" => 'required|file|mimes:csv'
-        ]);
-
-        if ($request->hasFile('final_file')) {
-            $file = $request->file('final_file');
-            $name = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
-            $fileName = 'sc-'.date("Ymd-his") . "." . $file->getClientOriginalExtension();
-            $file->storeAs('csv', $fileName, 'local');
-            $image = $fileName;
-
-            $count_header = CountHeader::find($id);
-            $count_header->final_file = $image;
-            $count_header->save();
-        }
-
-        Excel::import(new CountDetailImport($id),request()->file('final_file'));
-        return back();
-
-    }
     
 }

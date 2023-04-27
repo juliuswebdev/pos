@@ -4,7 +4,12 @@ $(document).ready(function() {
     inventory_count_table = $('#inventory_count_table').DataTable({
         processing: true,
         serverSide: true,
-        ajax: '/inventory-count',
+        ajax: {
+            url: '/inventory-count',
+            data: function (d) {
+                d.status = $('#status').val()
+            }
+        },
         columnDefs: [
             {
                 targets: 0,
@@ -12,7 +17,7 @@ $(document).ready(function() {
                 searchable: false,
             },
         ],
-        aaSorting: [[2, 'desc']],
+        aaSorting: [[1, 'desc']],
         columns: [
             { data: 'action', name: 'action' },
             { data: 'date', name: 'date' },
@@ -28,6 +33,10 @@ $(document).ready(function() {
         fnDrawCallback: function(oSettings) {
             __currency_convert_recursively($('#inventory_count_table'));
         },
+    });
+
+    $('#status').change(function(){
+        inventory_count_table.draw();
     });
 
     $('#count_type').change(function() {
@@ -82,12 +91,16 @@ $(document).ready(function() {
         });
     });
 
-    $(document).on('click', '.upload_final_file', function(e) {
-        var count_reference = $(this).data('count_reference');
-        var final_file_upload_action = '/inventory-count/upload-final-file/'+count_reference;
-        $('#finalize form').attr('action', final_file_upload_action);
+    $(document).on('click', '.action_modal_form', function(e) {
+        var action = $(this).data('action');
+        var target = $(this).data('target');
+        $(target+' form').attr('action', action);
     });
-    
+
+
+    $(document).on('click', '.disabled a', function(e) {
+        e.preventDefault();
+    });
 
 
 });

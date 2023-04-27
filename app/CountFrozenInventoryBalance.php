@@ -5,7 +5,7 @@ namespace App;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class CountDetail extends Model
+class CountFrozenInventoryBalance extends Model
 {
     use HasFactory;
     protected $fillable = [
@@ -13,10 +13,9 @@ class CountDetail extends Model
         'sku',
         'upc',
         'frozen_quantity',
-        'count_quantity',
         'created_at',
         'updated_at'
     ];
 
-    protected $table = 'count_detail';
+    protected $table = 'count_frozen_inventory_balance';
 }

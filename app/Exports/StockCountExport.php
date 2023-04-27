@@ -14,9 +14,10 @@ class StockCountExport implements FromCollection, WithHeadings, WithColumnWidths
 {
 
  
-    public $id;
-    function __construct($id) {
-        $this->id = $id;
+    public $data, $count_type;
+    function __construct($data, $count_type) {
+        $this->data = $data;
+        $this->count_type = $count_type;
     }
 
     /**
@@ -25,40 +26,23 @@ class StockCountExport implements FromCollection, WithHeadings, WithColumnWidths
     public function collection()
     {
         //
-        $count_header = CountHeader::find($id);
-        echo $count_header->count_type .'<br>';
+     
+        if($this->count_type == 'mixed_skus') {
+            return $this->data->where('products.id', 0)->get();
+        } else {
+            $products = $this->data
+                ->select([
+                    'products.sku AS sku',
+                    DB::raw('CONCAT("") AS upc_code'),
+                    'products.name AS product_name',
+                    DB::raw("( SELECT COALESCE(SUM(qty_available), 0) FROM variation_location_details WHERE product_id = products.id
+                    ) as expected"),
+                    DB::raw('CONCAT("") AS counted')
+                ])
+            ->get();
 
-        $products_query = DB::table('products')->where('business_id', Auth::user()->business_id);
-        $products_query->leftJoin('variation_location_details', function($join) {
-            $join->on('variation_location_details.product_id', '=', 'products.id');
-        });
-
-        if($count_header->count_sku_with_zero_stock_onhand == 1) {
-            $products_query->whereNull('variation_location_details.qty_available');
+            return $products;
         }
-
-        if($count_header->count_type == 'partial') {
-            $products_query->whereIn('products.category_id', [$count_header->categories])
-                    ->orWhereIn('products.sub_category_id', [$count_header->sub_categories])
-                    ->orWhereIn('products.brand_id', [$count_header->brands]);
-        }
-
-        $products = $products_query
-            ->select([
-                'products.sku AS sku',
-                DB::raw('CONCAT("") AS upc_code'),
-                DB::raw('CONCAT("") AS imei_or_serial'),
-                'products.name AS product_name',
-                DB::raw("( SELECT COALESCE(SUM(qty_available), 0) FROM variation_location_details WHERE product_id = products.id
-                ) as expected"),
-                DB::raw('CONCAT("") AS counted'),
-                'products.category_id AS category',
-                'products.sub_category_id AS sub_category',
-                'products.brand_id AS brand'
-            ])
-        ->get();
-
-        return $products;
 
     }
 
@@ -67,7 +51,7 @@ class StockCountExport implements FromCollection, WithHeadings, WithColumnWidths
     */
     public function headings(): array
     {
-        return ["SKU", "UPC CODE", "IMEI OR SERIAL", "PRODUCT NAME", "EXPECTED", "COUNTED"];
+        return ["SKU", "UPC CODE", "PRODUCT NAME", "EXPECTED", "COUNTED"];
     }
 
     public function columnWidths(): array

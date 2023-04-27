@@ -19,6 +19,16 @@
             </div>
         @endslot
         <div class="table-responsive" style="min-height: 300px">
+            <div class="form-group">
+                <label><strong>@lang('inventory_count.status') :</strong></label>
+                <select id='status' class="form-control" style="width: 200px">
+                    <option value="">--All--</option>
+                    <option value="1">Batch Created</option>
+                    <option value="2">Frozen</option>
+                    <option value="3">Count Updated</option>
+                    <option value="4">Posted</option>
+                </select>
+            </div>
             <table class="table table-bordered table-striped ajax_view" id="inventory_count_table">
                 <thead>
                     <tr>
@@ -37,6 +47,28 @@
             </table>
         </div>
     @endcomponent
+
+
+    <div id="freeze_confirm" tabindex="-1" role="dialog" aria-hidden="true" class="modal fade text-left">
+        <div role="document" class="modal-dialog">
+            <div class="modal-content">
+                <form method="POST" action="" accept-charset="UTF-8" enctype="multipart/form-data">
+                    {{ csrf_field() }}
+                    <div class="modal-header">
+                        <button type="button" class="close no-print" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
+                        <h4 class="modal-title">@lang('inventory_count.freeze_count')</h4>
+                    </div>
+                    <div class="modal-body">
+                        <p class="italic">@lang('inventory_count.freeze_confirm')</p>
+                        <div class="form-group">
+                            <button type="submit" class="btn btn-primary">Confirm</button>
+                            <a type="button" class="btn btn-danger" data-dismiss="modal"  aria-label="Close">Cancel</a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 
     <div id="create_count_stock" tabindex="-1" role="dialog" aria-hidden="true" class="modal fade text-left">
         <div role="document" class="modal-dialog">
@@ -113,7 +145,7 @@
         </div>
     </div>
 
-    <div id="finalize" tabindex="-1" role="dialog" aria-hidden="true" class="modal fade text-left">
+    <div id="upload_count" tabindex="-1" role="dialog" aria-hidden="true" class="modal fade text-left">
         <div role="document" class="modal-dialog">
             <div class="modal-content">
                 <form method="POST" action="" accept-charset="UTF-8" enctype="multipart/form-data">
@@ -199,10 +231,10 @@
 @section('javascript')
 	<script src="{{ asset('js/inventory_count.js?v=' . $asset_v) }}"></script>
     
-        @if($errors->count() > 0){
+        @if(count($errors) > 0)
             @if($errors->first('final_file'))
             <script>
-                $(function($){ $("#finalize").modal('show'); }) 
+                $(function($){ $("#upload_count").modal('show'); }) 
             </script>
             @endif
         @endif

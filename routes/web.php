@@ -340,6 +340,7 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
     Route::get('/inventory-count/{id}/qty-adjustment', [InventoryCountController::class, 'qty_adjustment']);
     Route::get('/inventory-count/download-initial-file/{id}', [InventoryCountController::class, 'download_initial_file']);
     Route::post('/inventory-count/upload-final-file/{id}', [InventoryCountController::class, 'upload_final_file']);
+    Route::post('/inventory-count/freeze-count/{id}', [InventoryCountController::class, 'freeze_count']);
 
     Route::get('/cash-register/register-details', [CashRegisterController::class, 'getRegisterDetails']);
     Route::get('/cash-register/close-register/{id?}', [CashRegisterController::class, 'getCloseRegister']);
