@@ -247,6 +247,7 @@ class InventoryCountController extends Controller
     */
     public function freeze_count($id)
     {
+        // Freeze count
         $count_header = CountHeader::find($id);
         $count_header->status = 2;
         $count_header->user_froze_count = Auth::user()->id;
