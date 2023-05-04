@@ -11,19 +11,50 @@ use App\BusinessLocation;
 use App\Category;
 use App\Brands;
 use App\Product;
-
+use App\ProductVariation;
+use App\VariationLocationDetails;
+use App\Transaction;
+use App\PurchaseLine;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\StockCountExport;
 use App\Imports\CountDetailImport;
+use App\StockAdjustmentLine;
+use App\Utils\ModuleUtil;
+use App\Utils\ProductUtil;
+use App\Utils\TransactionUtil;
+
+use Carbon\Carbon;
 
 use Datatables;
 use Auth;
 use DB;
+use Config;
 
 
 class InventoryCountController extends Controller
 {
-    //
+    
+    /**
+     * All Utils instance.
+     */
+    protected $productUtil;
+
+    protected $transactionUtil;
+
+    protected $moduleUtil;
+
+    /**
+     * Constructor
+     *
+     * @param  ProductUtils  $product
+     * @return void
+     */
+    public function __construct(ProductUtil $productUtil, TransactionUtil $transactionUtil, ModuleUtil $moduleUtil)
+    {
+        $this->productUtil = $productUtil;
+        $this->transactionUtil = $transactionUtil;
+        $this->moduleUtil = $moduleUtil;
+    }
 
     /**
      * Show the form for creating a new resource.
@@ -40,7 +71,7 @@ class InventoryCountController extends Controller
  
             $inventory_count = CountHeader::where('count_header.business_id', Auth::user()->business_id)
                 ->leftJoin('business_locations', function($join){
-                    $join->on('count_header.business_location_id', '=', 'business_locations.id');
+                    $join->on('business_locations.id','=','count_header.business_location_id');
                 })
                 ->select([
                     'count_header.id AS id',
@@ -74,7 +105,7 @@ class InventoryCountController extends Controller
 
                             if($row->status == 1) {
                                 $html .=  '<li>
-                                    <a href="#" data-toggle="modal" data-target="#freeze_confirm" class="action_modal_form" data-action="'.action('App\Http\Controllers\InventoryCountController@freeze_count', [$row->id]).'">
+                                    <a href="#" data-toggle="modal" data-target="#freeze_confirm" class="action_modal_form freeze_confirm" data-action="'.action('App\Http\Controllers\InventoryCountController@freeze_count', [$row->id]).'"  data-count_reference="'.$row->count_reference.'">
                                         <i class="fa fa-file" aria-hidden="true" style="margin-right: 10px"></i>'.__("inventory_count.freeze_count").'
                                     </a>
                                 </li>';
@@ -110,20 +141,16 @@ class InventoryCountController extends Controller
                                 </li>';
                             }
 
-                            if($row->final_file) {
-                            $html .=  '
+                            if($row->status == 3 || $row->status == 4) {
+                                $html .=  '
                                     <li class="divider"></li>
                                     <li>
-                                        <a href="/uploads/csv/'.$row->final_file.'">
-                                            <i class="fa fa-download" aria-hidden="true"></i>'.__("inventory_count.initial_file").'
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a href="#" data-toggle="modal" data-target="#final_report">
+                                        <a href="#" class="final_report" data-toggle="modal" data-target="#final_report" data-action="'.action('App\Http\Controllers\InventoryCountController@view_inventory_count', [$row->id]).'">
                                             <i class="fa fa-file" aria-hidden="true"></i>'.__("inventory_count.final_report").'
                                         </a>
                                     </li>';
-                            }
+                            } 
+
                             $html .=  '</ul>
                             </div>';
                     return $html;
@@ -184,7 +211,6 @@ class InventoryCountController extends Controller
         $brands = Brands::where('business_id',  Auth::user()->business_id)
                         ->select(['id', 'name'])
                         ->get();
-
         return view('inventory_count.index', [
             'business_locations' => $business_locations,
             'categories' => $categories,
@@ -223,13 +249,15 @@ class InventoryCountController extends Controller
 
             $products = $products_query->select([
                 DB::raw('CONCAT("'.$count_header->id.'") AS count_header_id'),
+                'products.id AS product_id',
                 'products.sku AS sku',
-                DB::raw('CONCAT("") AS upc'),
+                DB::raw('products.upc AS upc'),
                 DB::raw('CURRENT_TIMESTAMP() AS created_at')
             ]);
 
             CountDetail::insertUsing([
                 'count_header_id',
+                'product_id',
                 'sku',
                 'upc',
                 'created_at'
@@ -259,7 +287,8 @@ class InventoryCountController extends Controller
             $products = $products_query->select([
                 DB::raw('CONCAT("'.$count_header->id.'") AS count_header_id'),
                 'products.sku AS sku',
-                DB::raw('CONCAT("") AS upc'),
+                'products.id AS product_id',
+                DB::raw('products.upc AS upc'),
                 DB::raw("( SELECT COALESCE(SUM(qty_available), 0) FROM variation_location_details WHERE product_id = products.id
                     ) as frozen_quantity"),
                 DB::raw('CURRENT_TIMESTAMP() AS created_at'),
@@ -268,6 +297,7 @@ class InventoryCountController extends Controller
 
             CountFrozenInventoryBalance::insertUsing([
                 'count_header_id',
+                'product_id',
                 'sku',
                 'upc',
                 'frozen_quantity',
@@ -289,22 +319,14 @@ class InventoryCountController extends Controller
      *
      * @return \Illuminate\Http\Response
     */
-    public function qty_adjustment($id) 
-    {
-        return view('inventory_count.qty_adjustment');
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     *
-     * @return \Illuminate\Http\Response
-    */
     public function download_initial_file($id) 
     {
         
         $count_header = CountHeader::find($id);
         $file_name = $count_header->count_reference ?? 'sc-'.$id;
+        Config::set('excel.exports.csv.delimiter', ',');
         return Excel::download(new StockCountExport($this->filter_products($count_header), $count_header->count_type), $file_name.'.csv');
+
     }
 
     /**
@@ -327,6 +349,7 @@ class InventoryCountController extends Controller
             $csv = $fileName;
 
             $count_header = CountHeader::find($id);
+            $count_header->count_note = $request->input('count_note');
             $count_header->final_file = $csv;
             $count_header->status = 3;
             $count_header->save();
@@ -338,17 +361,20 @@ class InventoryCountController extends Controller
 
     }
 
-        /**
+    /**
      * Show the form for creating a new resource.
      *
      * @return \Illuminate\Http\Response
     */
     public function filter_products($count_header)
     {
-        $products_query = DB::table('products')->where('business_id', Auth::user()->business_id);
-        $products_query->leftJoin('variation_location_details', function($join) {
+        $products_query = DB::table('products')
+        ->where('products.business_id', Auth::user()->business_id)
+        ->leftJoin('variation_location_details', function($join) {
             $join->on('variation_location_details.product_id', '=', 'products.id');
-        });
+        })->leftJoin('product_locations', function($join) {
+            $join->on('product_locations.product_id', '=', 'products.id');
+        })->where('product_locations.location_id', $count_header->business_location_id);
 
         if($count_header->count_sku_with_zero_stock_onhand == 1) {
             $products_query->whereNull('variation_location_details.qty_available');
@@ -363,5 +389,251 @@ class InventoryCountController extends Controller
         return $products_query;
     }
 
+    /**
+     * Show the form for creating a new resource.
+     *
+     * @return \Illuminate\Http\Response
+    */
+    public function view_inventory_count($id)
+    {
+        if(request()->ajax()) {
+
+            $count_header = CountHeader::find($id);
+
+            $business_location =  BusinessLocation::where('id', $count_header->business_location_id)
+                        ->select(['name', 'location_id'])
+                        ->first();
+
+            $count_detail = CountDetail::where('count_detail.count_header_id', $count_header->id)
+                    ->leftJoin('products', function($join){
+                        $join->on('products.id', 'count_detail.product_id');
+                    })
+                    ->select([
+                        'count_detail.sku as sku',
+                        'count_detail.upc as upc',
+                        'products.name as product_name',
+                        'count_detail.frozen_quantity as frozen_quantity',
+                        'count_detail.count_quantity as count_quantity'
+                    ])
+                    ->get();
+          
+            $html = '
+                <p><strong>'.__('inventory_count.date').': </strong>'. $count_header->created_at .'</p>
+                <p><strong>'.__('inventory_count.location').': </strong>'. $business_location->name.' ['.$business_location->location_id.']</p>
+                <p><strong>'.__('inventory_count.count_type').': </strong>';
+                $text = 'N/A';
+                $type = 'default';
+                if($count_header->count_type == 'entire_location') {
+                    $type = 'info';
+                    $text = 'Entire Location';
+                } else if ($count_header->count_type == 'partial') {
+                    $type = 'primary';
+                    $text = 'Partial';
+                } else if ($count_header->count_type == 'mixed_skus') {
+                    $type = 'warning';
+                    $text = 'Mixed SKUs';
+                }
+                $html .= '<span class="btn btn-xs btn-'.$type.'">'.$text.'</span>';
+               $html .= '</p>
+                <p>
+                    <span>
+                        <strong>'.__("inventory_count.files").': </strong>
+                        &nbsp;&nbsp;<a class="btn btn-sm btn-primary download_inventory_count" href="'.action('App\Http\Controllers\InventoryCountController@download_initial_file', [$count_header->id]).'" data-count_reference="'.$count_header->count_reference.'"><i class="fa fa-download"></i> '.__("inventory_count.initial_file").'</a>
+                        &nbsp;&nbsp;<a class="btn btn-sm btn-info" href="'.asset('uploads/csv') .'/'. $count_header->final_file.'"><i class="fa fa-download"></i> '.__("inventory_count.final_file").'</a>
+                    </span>
+                </p>
+              
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>'.__("inventory_count.sku").'</th>
+                            <th>'.__("inventory_count.upc_code").'</th>
+                            <th>'.__("inventory_count.product_name").'</th>
+                            <th>'.__("inventory_count.expected").'</th>
+                            <th>'.__("inventory_count.counted").'</th>
+                        </tr>
+                    </thead>
+                    <tbody>';
+                    $count = 1;
+                    foreach($count_detail as $item) {
+                        $html .= '<tr>
+                                <td><strong>'.$count++.'</strong></td>
+                                <td>'.$item->sku.'</td>
+                                <td>'.$item->upc.'</td>
+                                <td>'.$item->product_name.'</td>
+                                <td>'.$item->frozen_quantity.'</td>
+                                <td>'.$item->count_quantity.'</td>
+                            </tr>';
+                    }
+
+            $html  .= '</tbody>
+                </table>';
+            if($count_header->status == 3) {
+                $html .= '<a class="btn btn-primary d-print-none" href="'.action('App\Http\Controllers\InventoryCountController@qty_adjustment', [$count_header->id]).'"><i class="fa fa-plus"></i> Add Adjustment</a></div>';
+            }
+            return $html;
+        }
+    }
+
     
+    /**
+     * Show the form for creating a new resource.
+     *
+     * @return \Illuminate\Http\Response
+    */
+    public function qty_adjustment($id) 
+    {
+    
+        $count_header = CountHeader::find($id);
+
+        if ($count_header == null || $count_header->status == 4) {
+            abort(404);
+        }
+
+        $business_locations = BusinessLocation::where('business_id',  Auth::user()->business_id)
+            ->select(['id', 'name', 'location_id'])
+            ->get();
+
+        $count_details = CountDetail::where('count_detail.count_header_id', $count_header->id)
+                ->leftJoin('products', function($join){
+                    $join->on('products.id', 'count_detail.product_id');
+                })
+                ->select([
+                    'count_detail.id as id',
+                    'count_detail.count_header_id as count_header_id',
+                    'count_detail.sku as sku',
+                    'count_detail.upc as upc',
+                    'count_detail.product_id as product_id',
+                    'products.name as product_name',
+                    'count_detail.frozen_quantity as frozen_quantity',
+                    'count_detail.count_quantity as count_quantity'
+                ])
+                ->get();
+
+        return view('inventory_count.qty_adjustment', [
+            'count_header' => $count_header,
+            'business_locations' => $business_locations,
+            'count_details' => $count_details
+        ]);
+    }
+
+
+    /**
+     * Show the form for creating a new resource.
+     *
+     * @return \Illuminate\Http\Response
+    */
+    public function post_count(Request $request, $id)
+    {
+        $count_header = CountHeader::find($id);
+
+        $user_id = Auth::user()->id;
+
+        if ($count_header == null || $count_header->status == 4) {
+            abort(404);
+        }
+
+        $fileName = null;
+        if ($request->hasFile('attach_document')) {
+            $file = $request->file('attach_document');
+            $name = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+            $fileName = date("Ymd-his") . "." . $file->getClientOriginalExtension();
+            $file->storeAs('post_count', $fileName, 'local');
+        }
+
+        $count_header->count_note = $request->input('post_note');
+        $count_header->user_posted_count = Auth::user()->id;
+        $count_header->attach_document = $fileName;
+        $count_header->status = 4;
+        $count_header->save();
+
+        // Remove count details
+        $count_detail_delete_id_arr = explode(',', $request->input('count_detail_id_deleted'));
+        $count_details = CountDetail::whereIn('id', $count_detail_delete_id_arr)->delete();
+        
+        foreach($request->count_quantity as $key => $count_quantity) {
+
+            if($count_quantity != 0 && is_numeric($count_quantity)) {
+                $count_detail = CountDetail::where('id', $key)->where('count_header_id', $count_header->id)->first();
+                $count_detail->count_quantity = $count_quantity;
+                $count_detail->save();
+
+                $product_id  = $count_detail->product_id;
+                $product_variation_id = ProductVariation::where('product_id', $product_id)->first()->id ?? 0;
+
+                $variation_location_details = VariationLocationDetails::where('product_id', $product_id)->where('product_variation_id', $product_variation_id)->first(); 
+
+                $old_qty_available = $variation_location_details->qty_available ?? 0;
+
+
+                $product_q = Product::find($product_id);
+                $product_q->enable_stock = 1;
+                $product_q->save();
+
+                //Add quantity in VariationLocationDetails
+                $variation_location_d = VariationLocationDetails::where('variation_id', $product_variation_id)
+                        ->where('product_id', $product_id)
+                        ->where('product_variation_id', $product_variation_id)
+                        ->where('location_id', $count_header->business_location_id)
+                        ->first();
+
+                if (empty($variation_location_d)) {
+                $variation_location_d = new VariationLocationDetails();
+                $variation_location_d->variation_id = $product_variation_id;
+                $variation_location_d->product_id = $product_id;
+                $variation_location_d->location_id = $count_header->business_location_id;
+                $variation_location_d->product_variation_id = $product_variation_id;
+                $variation_location_d->qty_available = $count_quantity;
+                }
+
+                $variation_location_d->qty_available = $count_quantity;
+                $variation_location_d->save();
+
+
+                if($count_quantity != $old_qty_available) {
+            
+                    $transaction_date = request()->session()->get('financial_year.start');
+                    $transaction_date = \Carbon::createFromFormat('Y-m-d', $transaction_date)->toDateTimeString();
+                    $transaction = Transaction::create(
+                        [
+                            'type' => 'physical_count_adjustment',
+                            'opening_stock_product_id' => $product_id,
+                            'status' => 'received',
+                            'business_id' => $count_header->business_id,
+                            'transaction_date' => $transaction_date,
+                            'total_before_tax' => 0,
+                            'location_id' => $count_header->business_location_id,
+                            'final_total' => $count_quantity,
+                            'payment_status' => 'paid',
+                            'created_by' => $user_id,
+                            'ref_no' => $count_header->count_reference
+                        ]
+                    );
+
+                    StockAdjustmentLine::create(
+                        [
+                            'transaction_id' => $transaction->id,
+                            'product_id' => $product_id,
+                            'variation_id' => $product_variation_id,
+                            'quantity' => $count_quantity
+                        ]
+                    );
+
+                    // Update purchase line history
+                    $purchase_line = PurchaseLine::create(
+                        [
+                            'transaction_id' => $transaction->id,
+                            'product_id' => $product_id,
+                            'variation_id' => $product_variation_id,
+                            'quantity' => $count_quantity
+                        ]
+                    );
+
+                }
+            }
+
+        }
+        return redirect()->route('inventory_count');
+    }
 }

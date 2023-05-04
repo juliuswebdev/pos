@@ -16,6 +16,7 @@ return new class extends Migration
         Schema::create('count_frozen_inventory_balance', function (Blueprint $table) {
             $table->id();
             $table->integer('count_header_id');
+            $table->integer('product_id');
             $table->string('sku');
             $table->string('upc')->nullable();
             $table->integer('frozen_quantity')->default(0);

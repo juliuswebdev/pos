@@ -34,6 +34,11 @@ return new class extends Migration
             $table->longText('categories')->nullable();
             $table->longText('sub_categories')->nullable();
             $table->longText('brands')->nullable();
+
+            $table->string('final_file')->nullable();
+            $table->string('attach_document')->nullable();
+            $table->longText('count_note')->nullable();
+            $table->longText('post_note')->nullable();
            
             $table->integer('created_by')->unsigned();
             $table->foreign('created_by')->references('id')->on('users')->onDelete('cascade');

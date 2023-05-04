@@ -18,7 +18,7 @@
                 <i class="fa fa-plus"></i> @lang('inventory_count.count_inventory')</a>
             </div>
         @endslot
-        <div class="table-responsive" style="min-height: 300px">
+        <div class="table-responsive" style="min-height: 400px">
             <div class="form-group">
                 <label><strong>@lang('inventory_count.status') :</strong></label>
                 <select id='status' class="form-control" style="width: 200px">
@@ -157,8 +157,12 @@
                     <div class="modal-body">
                         <p class="italic"><small>@lang('inventory_count.required_notes')</small></p>
                         <div class="form-group">
-                            <label>Upload File *</label>
+                            <label>@lang('inventory_count.upload_file') *</label>
                             <input type="file" name="final_file" class="form-control"  accept=".csv">
+                        </div>
+                        <div class="form-group">
+                            <label>@lang('inventory_count.note')</label>
+                            <textarea name="count_note"  rows="5" class="form-control"></textarea>
                         </div>
                         @if (count($errors) > 0)
                             <div class="alert alert-danger">
@@ -185,40 +189,7 @@
                         <h4 class="modal-title">@lang('inventory_count.count_inventory')</h4>
                     </div>
                     <div class="modal-body">                        
-                        <strong>@lang('inventory_count.date'): </strong>20/04/2023<br>
-                        <strong>@lang('inventory_count.location'): </strong>Shop 1<br>
-                        <strong>@lang('inventory_count.count_type'): </strong>Entire Location<br>
-                        <span>
-                            <strong>@lang("inventory_count.files"): </strong>
-                            &nbsp;&nbsp;<a href="" class="btn btn-sm btn-primary"><i class="fa fa-download"></i> @lang("inventory_count.initial_file")</a>
-                            &nbsp;&nbsp;<a href="" class="btn btn-sm btn-info"><i class="fa fa-download"></i> @lang("inventory_count.final_file")</a>
-                        </span>
-                        <br><br>
-                        <table class="table table-bordered">
-                            <thead>
-                                <tr>
-                                    <th>#</th>
-                                    <th>@lang("inventory_count.sku")</th>
-                                    <th>@lang("inventory_count.upc_code")</th>
-                                    <th>@lang("inventory_count.imei_or_serial_numbers")</th>
-                                    <th>@lang("inventory_count.product_name")</th>
-                                    <th>@lang("inventory_count.expected")</th>
-                                    <th>@lang("inventory_count.counted")</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><strong>1</strong></td>
-                                    <td>2881990</td>
-                                    <td>2881990</td>
-                                    <td>11111111</td>
-                                    <td>test</td>
-                                    <td>1</td>
-                                    <td>2</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        <a class="btn btn-primary d-print-none" href="/inventory_count/1/qty-adjustment"><i class="fa fa-plus"></i> Add Adjustment</a></div>
+                        
                     </div>
                 </form>
             </div>
