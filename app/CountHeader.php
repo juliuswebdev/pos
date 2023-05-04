@@ -20,6 +20,10 @@ class CountHeader extends Model
         'categories',
         'sub_categories',
         'brands',
+        'final_file',
+        'attach_document',
+        'count_note',
+        'post_note',
         'created_by',
         'user_froze_count',
         'user_posted_count'

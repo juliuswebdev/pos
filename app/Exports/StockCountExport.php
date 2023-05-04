@@ -9,6 +9,11 @@ use App\CountHeader;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithColumnWidths;
+use Maatwebsite\Excel\Concerns\WithColumnFormatting;
+
+use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
+
 
 class StockCountExport implements FromCollection, WithHeadings, WithColumnWidths
 {
@@ -33,7 +38,7 @@ class StockCountExport implements FromCollection, WithHeadings, WithColumnWidths
             $products = $this->data
                 ->select([
                     'products.sku AS sku',
-                    DB::raw('CONCAT("") AS upc_code'),
+                    DB::raw('CONCAT(products.upc) AS upc_code'),
                     'products.name AS product_name',
                     DB::raw("( SELECT COALESCE(SUM(qty_available), 0) FROM variation_location_details WHERE product_id = products.id
                     ) as expected"),
@@ -64,4 +69,8 @@ class StockCountExport implements FromCollection, WithHeadings, WithColumnWidths
             'E' => 710            
         ];
     }
+
+
+
+
 }

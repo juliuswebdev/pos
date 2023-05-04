@@ -37,14 +37,14 @@ class CountDetailImport implements ToCollection, WithHeadingRow
                     CountDetail::create([
                         'count_header_id' => $this->id,
                         'sku' => trim($row['sku']),
-                        'product_name' => $product->name,
+                        'product_id' => $product->id,
                         'frozen_quantity' => $quantity,
                         'count_quality' => trim($row['counted'])
                     ]);
                     CountFrozenInventoryBalance::create([
                         'count_header_id' => $this->id,
                         'sku' => trim($row['sku']),
-                        'product_name' => $product->name,
+                        'product_id' => $product->id,
                         'frozen_quantity' => $quantity,
                         'count_quality' => trim($row['counted'])
                     ]);

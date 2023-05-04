@@ -13,7 +13,7 @@
         <div class="box-header">
             <h3 class="box-title">@lang('superadmin::lang.pay_and_subscribe')</h3>
         </div>
-
+	
         <div class="box-body">
     		<div class="col-md-8">
         		<h3>

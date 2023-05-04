@@ -10,6 +10,7 @@ class CountFrozenInventoryBalance extends Model
     use HasFactory;
     protected $fillable = [
         'count_header_id',
+        'product_id',
         'sku',
         'upc',
         'frozen_quantity',

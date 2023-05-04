@@ -1,0 +1,269 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap');
+
+#logo,
+#errorLi,
+#header {
+    display: none !important;
+}
+
+form.wufoo {
+    margin-bottom: 30px !important;
+    padding-bottom: 30px !important;
+    min-height: 350px;
+}
+
+form.wufoo li.focused,
+form.wufoo li.error {
+    background-color: transparent !important;
+}
+
+form.wufoo li {
+    padding-left: 0;
+    padding-right: 0;
+    margin-bottom: 5px;
+}
+
+form.wufoo li.error .desc {
+    color: #525ca3 !important;
+    font-weight: normal !important;
+}
+
+form.wufoo li.error p.error {
+    font-weight: normal !important;
+    font-family: 'Noto Sans', sans-serif;
+}
+
+.confirm .wufoo h2 {
+    font-family: 'Noto Sans', sans-serif;
+    font-size: 32px;
+    color: #525ca3;
+}
+
+.confirm .wufoo {
+    font-size: 14px;
+}
+
+.confirm .wufoo h3 {
+    font-size: 24px !important;
+    margin-bottom: 0;
+}
+
+form.wufoo li .req {
+    position: relative;
+    top: unset;
+    left: unset;
+    color: inherit !important;
+    padding: 0 !important;
+}
+
+form.wufoo li span {
+    font-size: 16px !important;
+    padding-left: 5px;
+    font-family: 'Noto Sans', sans-serif;
+    color: #525ca3 !important;
+}
+
+form.wufoo .desc {
+    font-size: 16px !important;
+    font-weight: 400;
+    font-family: 'Noto Sans', sans-serif;
+}
+
+form.wufoo input[type='checkbox'] {
+    opacity: 0;
+    height: 0;
+}
+
+form.wufoo input[type='checkbox']+label {
+    position: relative;
+    margin: 0;
+}
+
+form.wufoo input[type='checkbox']+label .choice__text {
+    float: left !important;
+    margin-left: 30px;
+}
+
+form.wufoo input[type='checkbox'] {
+    width: auto !important;
+}
+
+form.wufoo input[type='checkbox']+label::before {
+    position: relative;
+    left: 0px;
+    top: 22px;
+    vertical-align: middle;
+    border-radius: 5px;
+    width: 17px;
+    height: 17px;
+    border: 2px solid #525CA3;
+    transition: .2s all linear;
+    cursor: pointer;
+    content: '';
+    display: inline-block;
+}
+
+form.wufoo .error input[type='checkbox']+label::before {
+    border: 2px solid #DF0000;
+}
+
+form.wufoo input[type='checkbox']:checked+label::after {
+    content: '';
+    position: absolute;
+    left: 4px;
+    margin-top: 29px;
+    background-color: #525CA3;
+    width: 13px;
+    height: 13px;
+}
+
+form.wufoo input[type='checkbox'] .choice__text {
+    font-size: 15px;
+    font-family: 'Noto Sans', sans-serif;
+}
+
+form.wufoo li .field {
+    margin-top: 5px;
+    width: 100%;
+    padding: 8px;
+    border-radius: 35px;
+    border: 1px solid #CECECE;
+    font-family: 'Noto Sans', sans-serif;
+    font-size: 16px !important;
+    font-size: 1rem;
+    line-height: 1.5;
+    color: #2B2B38;
+    box-sizing: border-box;
+}
+
+.wufoo .section div,
+form.wufoo li .desc {
+    color: #2B2B38 !important;
+    font-size: 16px !important;
+    font-family: 'Noto Sans', sans-serif;
+    line-height: 1.3;
+}
+
+form.wufoo li .desc {
+    color: #525CA3 !important;
+}
+
+#title15 .req {
+    display: none !important;
+}
+
+#saveForm {
+    border: 2px solid transparent;
+    background-color: #525CA3;
+    color: white;
+    border-radius: 30px;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    margin-right: 10px;
+    padding-top: 15px;
+    padding-right: 30px;
+    padding-left: 30px;
+    padding-bottom: 15px;
+    display: inline-block;
+    border: 2px solid #525CA3;
+    font-size: 16px !important;
+    font-size: 1.125rem;
+    font-weight: normal;
+    text-decoration: none;
+    text-align: center;
+    cursor: pointer;
+    font-weight: 700;
+    font-family: 'Noto Sans', sans-serif;
+    text-transform: uppercase;
+}
+
+#saveForm:hover {
+    border: 2px solid #525CA3;
+    background-color: transparent;
+    color: #525CA3;
+}
+
+#fo276li10 p.error,
+#Field16+label .choice__text,
+#title16,
+#title110 {
+    display: none !important;
+}
+
+label#title122, #title3, #title5, #title6, #title8, #title10, #title11, #title123 {
+    display: none;
+}
+
+
+#fo276li110,
+#fo775li110 {
+    margin-top: -30px;
+    padding-left: 30px;
+    padding-right: 20px;
+}
+
+/* #fo276li113 .symbol {
+    display: none;
+}
+
+#fo276li113 span {
+    padding-left: 0;
+    margin: 0;
+}
+
+#fo276li113 span:nth-child(2) input {
+    border-top-right-radius: 0!important;
+    border-bottom-right-radius: 0!important;
+}
+
+#fo276li113 span:nth-child(4) input {
+    border-left: none;
+    border-radius: 0!important;
+}
+
+#fo276li113 span:nth-child(6) input {
+    border-left: none;
+    border-top-left-radius: 0!important;
+    border-bottom-left-radius: 0!important;
+} */
+#instruct9 {
+    padding-left: 0;
+    padding-right: 0;
+}
+
+#public form.wufoo ul li.checkbox-text {
+    margin-top: -45px;
+    padding-left: 30px;
+    padding-right: 20px;
+}
+
+a {
+    color: #525CA3;
+}
+
+.safari .wufoo select.select {
+    font-size: 16px !important;
+}
+
+select#Field122 {
+    border: 2px solid #525CA3;
+    outline: none !important;
+}
+
+@media only screen and (max-width: 600px) {
+
+    form li.leftHalf,
+    form li.rightHalf {
+        width: 100% !important;
+        box-sizing: border-box;
+    }
+}
+
+@media only screen and (max-width: 420px) {
+    form.wufoo li span {
+        font-size: 16px !important;
+        padding-left: 2px;
+        font-family: 'Noto Sans', sans-serif;
+        color: #525ca3 !important;
+    }
+}

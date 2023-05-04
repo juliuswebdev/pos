@@ -98,9 +98,63 @@ $(document).ready(function() {
     });
 
 
-    $(document).on('click', '.disabled a', function(e) {
-        e.preventDefault();
+    $(document).on('click', '.final_report', function(e) {
+        var url = $(this).data('action');
+        $.ajax({
+            type: "GET",
+            url: url,
+            success: function (data) {
+                $('#final_report.modal .modal-body').html(data);
+            }
+        });
     });
+
+    $("#search").on("keyup", function() {
+        var value = $(this).val().toLowerCase();
+    
+        $("#myTable tbody tr").each(function(index) {
+                $row = $(this);
+                var id = $row.find("td:first").text().toLowerCase();
+                if (id.indexOf(value) != 0) {
+                    $(this).hide();
+                }
+                else {
+                    $(this).show();
+                }
+        });
+    });
+
+    var count_detail_id_arr = [];
+    $('.count-detail-remove').click(function() {
+        if(confirm('Are you sure you want to remove this?')) {
+            var count_detail_id = $(this).data('count_id');
+            count_detail_id_arr.push(count_detail_id);
+            $('input[name="count_detail_id_deleted"]').val(count_detail_id_arr.join());
+            $(this).parents('tr').remove();
+            get_total_qty();
+        }
+    });
+
+    $(document).on('click', '.freeze_confirm', function(e) {
+        var count_reference = $(this).data('count_reference');
+        $('#freeze_confirm .modal-body p.italic').prepend('<p><strong>Reference Count: </strong>'+count_reference+'</p>')
+    });
+
+    get_total_qty();
+    $('input.qty').keyup(function(){
+        get_total_qty();
+    });
+
+    function get_total_qty() {
+        var total_qty = 0;
+        $('input.qty').each(function(){
+            var value = $(this).val();
+            if(value != '') {
+                total_qty = total_qty +  parseInt(value);
+            }
+        });
+        $('#total-qty').text(total_qty);
+    }
 
 
 });
